@@ -37,7 +37,6 @@ try:
             else:
                 print("Ошибка: персонаж не найден")
             """Получение данных о монстре"""
-    
 
     def get_data(table, condition_column, condition_value):
         with connection.cursor() as cursor:
@@ -50,9 +49,10 @@ try:
 
     def get_monster_data(monster_id):
         with connection.cursor() as cursor:
-            get_data = f"""SELECT * FROM monsters
-                           INNER JOIN monster_attacks ON monsters.id = monster_attacks.id_monster
-                           WHERE id_monster = {monster_id}"""
+            get_data = f""" SELECT * FROM monsters
+                            INNER JOIN monster_attacks ON monsters.id = monster_attacks.id_monster
+                            INNER JOIN attacks ON monster_attacks.id_attack = attacks.id
+                            WHERE monsters.id = {monster_id}"""
             cursor.execute(get_data)
             monster = cursor.fetchall() # список словарей
             if monster:
@@ -62,6 +62,7 @@ try:
                 return monster
             else:
                 print("Ошибка: монстр не найден")
+                return []
 
     def update_data_base(table, column, value, condition_column, condition_value):
         with connection.cursor() as cursor:
@@ -69,18 +70,7 @@ try:
             cursor.execute(update_data, (value, condition_value))
         connection.commit()  # Коммитить изменения после выполнения запроса
     
-    # обновить КД у персонажа
-    def update_kd(data):
-        with connection.cursor() as cursor:
-            if data["who_is"] == 1: # если это перс, то обновляем 
-                kd = sort.check_kd(data)
-                id = data["id"]
-                update_data = f"UPDATE characters SET armor_class = {kd} WHERE user_id = {id}"
-                cursor.execute(update_data)
-                print(f"Данные обновлены. КД {data['name']} теперь {kd}")
-            else:
-                print("Ты пытаешься обновить данные монстра")
-        connection.commit()
+
         
     # получить кд
     def get_KD(data):
@@ -97,6 +87,21 @@ try:
                 print(f"КД {data['name']} = {kd}")
         connection.commit()
 
+    # обновить КД у персонажа
+    def update_kd(data):
+        with connection.cursor() as cursor:
+            for i in range(0, len(data)):
+                now_data = data[i]
+                if now_data["who_is"] == 1: # если это перс, то обновляем 
+                    kd = sort.check_kd(now_data)
+                    id = now_data["id"]
+                    update_data = f"UPDATE characters SET armor_class = {kd} WHERE user_id = {id}"
+                    cursor.execute(update_data)
+                    print(f"Данные обновлены. КД {now_data['name']} теперь {kd}")
+                else:
+                    print("Ты пытаешься обновить данные монстра")
+        connection.commit()
+        
     def set_hit(data):
         with connection.cursor() as cursor:
             for i in range(0, len(data)):
@@ -121,30 +126,35 @@ try:
         
     def check_skill(data):
         with connection.cursor() as cursor:
-            get_data = f''' SELECT c.name, cs.skill_id, s.name FROM character_skills cs
+            get_data = f''' SELECT c.name, cs.skill_id, s.name_skill FROM character_skills cs
                             JOIN skills s ON cs.skill_id = s.id
                             JOIN characters c ON c.id = cs.character_id
                             WHERE c.id = {data["id"]}''' # беру таблицу со всему скиллами указанного id персонажа
             cursor.execute(get_data)
             skill_table = cursor.fetchall()
-            print("=" * 50, f"Получены данные скилах {data['name']}", sep="\n")
+            print("=" * 50, f"Получены данные о скилах {data['name']}", sep="\n")
             return skill_table   
     
     def character_ability(data):
         with connection.cursor() as cursor:
-            get_data = f''' SELECT c.name, cs.skill_id, s.name FROM character_skills cs
+            get_data = f''' SELECT c.name, cs.skill_id, s.name_skill FROM character_skills cs
                             JOIN skills s ON cs.skill_id = s.id
                             JOIN characters c ON c.id = cs.character_id
                             WHERE c.id = {data["id"]}''' # беру таблицу со всему скиллами указанного id персонажа
             cursor.execute(get_data)
             skill_table = cursor.fetchall()
-            print("=" * 50, f"Получены данные скилах {data['name']}", sep="\n")
+            print("=" * 50, f"Получены данные о скилах {data['name']}", sep="\n")
             return skill_table 
             
-    def insert_status(id_character, name_effects, time):
+    def insert_status(creature, status_id, time):
         with connection.cursor() as cursor:
-            insert_data = f"INSERT INTO status (id_character, name_effects, time) VALUE (%s, %s, %s)"
-            cursor.execute(insert_data, (id_character, name_effects, time))
+            id = creature['id']
+            if creature['who_is'] == 1:
+                insert_data = f"INSERT INTO status (status_id, id_character, time) VALUE (%s, %s, %s)"
+                cursor.execute(insert_data, (status_id, {id}, time))
+            else:
+                insert_data = f"INSERT INTO status (status_id, id_monster, time) VALUE (%s, %s, %s)"
+                cursor.execute(insert_data, (status_id, {id}, time))
         connection.commit()  # Коммитить изменения после выполнения запроса
         
         

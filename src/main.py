@@ -1,8 +1,8 @@
-import story.first_story as first_story
+import story.first_quest as first_quest
 import story.second_story as second_story
 
 SCENES = {
-    1: first_story.first_story,
+    1: first_quest.first_quest,
     2: second_story.second_story
 }
 

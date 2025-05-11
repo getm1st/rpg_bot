@@ -92,7 +92,7 @@ def check_initiative(list_pers):
 
 """Определение попадания"""
 # если человек: взять топ характеристику, посмотреть какое значение модификатора по 1 и под 2, выбрать больший, затем прибавить мастерство (в зависимости от левела) и прибавить остальные модификаторы
-def hit (data):
+def hit (data, dop_value="0"):
     dice = D20_dice()
     if data["who_is"] == 1: #сначала определяем какие есть основные характеристики у персонажа, если это человек
         a = data["save"].split(" or ")
@@ -106,7 +106,7 @@ def hit (data):
             return aim
         
         characteristic = check_mod(better_value(data, a[0], a[1])) # смотрю какая хар-ка больше
-        aim = characteristic + master_point(data["level"]) + dice # плюсую мод большей
+        aim = int(characteristic + master_point(data["level"]) + dice + int(dop_value)) # плюсую мод большей
 
         if aim >= data['armor_class']:
             print(f"{data['name']} выкидывает попадание {aim} против КД {data['armor_class']}")
@@ -124,7 +124,7 @@ def hit (data):
             aim = 0
             return aim
             
-        aim = data["aim_bonus"] + data["proficiency_bonus"] + dice
+        aim = int(data["aim_bonus"] + data["proficiency_bonus"] + dice + int(dop_value))
         if aim >= data['armor_class']:
             print(f"{data['name']} выкидывает попадание {aim} против КД {data['armor_class']}")
         else:
@@ -142,29 +142,48 @@ def check_mod(value_characteristic):
     return (value_characteristic - 10) // 2
 
 
-
-    
+"""Установка КД"""
+def check_kd (data):
+    if data['who_is'] == 1:
+        armor_class = data['item_armor_class']
+        if '+' in armor_class:
+            armor, mod = armor_class.split(' + ')
+            if 'Лов' in armor_class:
+                mod = int(check_mod(data['dexterity']))
+                if 'макс. 2' in armor_class:
+                    if mod >= 2:
+                        value = int(armor) + 2
+                    else: 
+                        value = int(armor) + int(mod)
+                else:
+                    value = int(armor) + int(mod)
+        else:
+            value = int(armor_class)
+    else:
+        value = int(data['armor_class'])
+    return value
+            
 
 """Определяю КД"""
-def check_kd (data):
-    if data["who_is"] == 1:
-        mod_dext = check_mod(data["dexterity"]) # определение модификатора по ловкости
-        if data["armor_type"] == "light":
-            mod = mod_dext
-        elif data["armor_type"] == "medium":
-            if mod_dext <= 2:
-                mod = mod_dext
-            else:
-                mod = 2
-        kd = int(data["item_armor_class"]) + int(mod) # кд от брони усановленное значение + бонусы от типа брони
-    else:
-        kd = data["armor_class"] # Получение кд монстра
-    return kd
+# def check_kd (data):
+#     if data["who_is"] == 1:
+#         mod_dext = check_mod(data["dexterity"]) # определение модификатора по ловкости
+#         if data["armor_type"] == "light":
+#             mod = mod_dext
+#         elif data["armor_type"] == "medium":
+#             if mod_dext <= 2:
+#                 mod = mod_dext
+#             else:
+#                 mod = 2
+#         kd = int(data["item_armor_class"]) + int(mod) # кд от брони усановленное значение + бонусы от типа брони
+#     else:
+#         kd = data["armor_class"] # Получение кд монстра
+#     return kd
 
 """Определяю урон"""
 def damage (data, attack_roll): # Если attack_roll 2000 то это крит
     if data["who_is"] == 1: # если персонаж
-        dice_value = data["damage_dice"].lower().split("к") # формат dice "1к6", получаю и разделяю на 1, 6
+        dice_value = data["damage_dice"].lower().split("d") # формат dice "1к6", получаю и разделяю на 1, 6
         dice_value[0], dice_value[1] = int(dice_value[0]), int(dice_value[1])
         roll2 = 0
         roll = 0
@@ -194,7 +213,7 @@ def damage (data, attack_roll): # Если attack_roll 2000 то это крит
 
 """Считаем хитпоинты"""
 def count_hit(data):
-    hit_dice = data["hit_dice"][1: ]
+    hit_dice = data["hit_dice"]
     constitution = check_mod(data["constitution"])
     hitpoint = int(hit_dice) + constitution
     return hitpoint
@@ -240,7 +259,7 @@ def choose_target(attacker, fighters):
 
 def check_saving(data, characteristic, skill,  value): # проверка спасброска. База данных, характирстика, которая проверяется и значение на которое надо проверить
     dice = D20_dice()
-    print(f'{data["name"]} выкидывает {dice}')
+    print(f'{data["name"]} бросает кубик D20 и выпадает {dice}')
     
     if skill in data_base.check_skill(data): # если у персонажа есть указанный скилл, то учитываю его
         dop = master_point(data['level'])
