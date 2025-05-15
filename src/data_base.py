@@ -146,16 +146,36 @@ try:
             print("=" * 50, f"Получены данные о скилах {data['name']}", sep="\n")
             return skill_table 
             
-    def insert_status(creature, status_id, time):
+    def insert_status(status_id, creature, remaining_time=None, effect_value=None, effect_meta=None):
+        """
+        status_id      – id из справочника status
+        creature       – словарь персонажа, у которого есть поля 'id' и 'who_is'
+        remaining_time – оставшиеся ходы (или None)
+        effect_value   – числовой параметр эффекта (или None)
+        effect_meta    – произвольный текст/JSON (или None)
+        """
+        # Определяем, в какую колонку пихать creature['id']
+        if creature['who_is']==1:
+            char_col = "id_character" 
+        else:
+            char_col = "id_monster"
+            
+        char_id  = creature['id']
+        
+        sql = f"""
+        INSERT INTO status_now
+        (status_id, {char_col}, remaining_time, effect_value, effect_meta)
+        VALUES (%s, %s,        %s,             %s,           %s)
+        """
         with connection.cursor() as cursor:
-            id = creature['id']
-            if creature['who_is'] == 1:
-                insert_data = f"INSERT INTO status (status_id, id_character, time) VALUE (%s, %s, %s)"
-                cursor.execute(insert_data, (status_id, {id}, time))
-            else:
-                insert_data = f"INSERT INTO status (status_id, id_monster, time) VALUE (%s, %s, %s)"
-                cursor.execute(insert_data, (status_id, {id}, time))
-        connection.commit()  # Коммитить изменения после выполнения запроса
+            cursor.execute(sql, (
+                status_id,
+                char_id,
+                remaining_time,
+                effect_value,
+                effect_meta
+            ))
+        connection.commit()
         
         
     def get_data(table, condition_column, condition_value):
@@ -172,6 +192,20 @@ try:
             cursor.execute(get_data, (condition_value))
             print("=" * 50, f"Удалены данные {table} WHERE {condition_column} = {condition_value}", sep="\n")
         connection.commit()  # Коммитить изменения после выполнения запроса
+        
+    def get_ability(target):
+        with connection.cursor() as cursor:
+            if target['who_is'] == 1:
+                entity = 'character'
+            else: 
+                entity = 'monster'
+            get_data = f''' SELECT * FROM abilities
+                            INNER JOIN {entity}_abilities p_a ON abilities.id = p_a.ability_id
+                            WHERE {entity}_id = {target['id']}'''
+            cursor.execute(get_data)
+            data = cursor.fetchall()  # Добавили скобки!
+            print("=" * 20, f"Получены данные об умениях {target['name']}", sep="\n")
+            return data
     
 except Exception as ex:
     print("Connetion refused...")

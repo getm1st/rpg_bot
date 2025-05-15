@@ -1,7 +1,7 @@
 def fight(list_character_id, list_monster_id):
     # короччче тут должна определяться инициатива, затем сравниваться, а потом будет бой. Вщ 0 идей как это реализоваться нормально
 
-    from data_base import get_character_data, get_monster_data, set_hit, update_data_base, get_data, delete_row, update_kd
+    from data_base import get_character_data, get_monster_data, set_hit, update_data_base, get_data, delete_row, update_kd, get_ability
     from sort import check_initiative, hit, damage, choose_target
     from ability import get_ability_instance
 
@@ -27,11 +27,7 @@ def fight(list_character_id, list_monster_id):
         
         print("\n🔥 Бой начинается! 🔥")
         
-        for i, fighter in enumerate(fighters, start=1):
-                if i == 1:
-                    print(f"Первым ходит {fighter['name']}")
-                else:
-                    continue
+        print(f"\nПервым ходит {fighters[0]['name']}!")
             
         while any(f["who_is"] == 1 and f["hitpoints"] > 0 for f in fighters) and any(f["who_is"] == 2 and f["hitpoints"] > 0 for f in fighters):
             
@@ -66,25 +62,15 @@ def fight(list_character_id, list_monster_id):
                 target = choose_target(fighter, fighters)  # Выбираем цель
                 
                 if not target:  
-                    print(f"{fighter['name']} не видит противников и пропускает ход!")
+                    print(f"{fighter['name']} не видит противников и пропускает ход")
                     continue  # Если нет цели, пропускаем ход
-                
-                attack_roll = hit(fighter)  # Бросаем d20 на попадание
-                if attack_roll >= target["armor_class"]:  # Если атака успешна.
                     
-                    ''' Блок абилок и их применение в случае наличия '''
-            if fighter['who_is'] == 1:
-                link_rows = get_data("character_abilities", "character_id", fighter['id'])
-                key = 'ability_id'
-            else:
-                link_rows = get_data("monster_abilities", "monster_id", fighter['id'])
-                key = 'ability_id'
-
-            ability_names = []
+                ''' Блок абилок и их применение в случае наличия '''
+            link_rows = get_ability(fighter)
+                        
+            ability_names = [] # Создаю список чисто названий абилити
             for row in link_rows:
-                ab = get_data("abilities", "id", row[key])
-                if ab:
-                    ability_names.append(ab[0]['name'])
+                ability_names.append(row['name'])
 
             # 4) Применение способностей или обычной атаки
             acted = False
@@ -95,13 +81,14 @@ def fight(list_character_id, list_monster_id):
                     print(f"Способность '{name}' не зарегистрирована")
                     continue
 
-                if ability.check_conditions(fighter, target):
-                    ability.apply(fighter, target)
-                    acted = True
+                if ability.check_conditions(fighter, target): # Если условия абилки выполнены, то
+                    ability.apply(fighter, target) # То выполняет абилку
+                    acted = True 
                     break
 
-            if not acted:
+            if not acted: # Если способность не выполнена (по любым причинам), то обычная атака
                 # Обычная атака
+
                 roll = hit(fighter)
                 if roll >= target['armor_class']:
                     dmg = damage(fighter)

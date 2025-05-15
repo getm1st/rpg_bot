@@ -1,7 +1,7 @@
 # ability.py
 
 import random
-from data_base import add_status, insert_status
+from data_base import insert_status
 from sort import hit, damage, dice
 
 class Ability:
@@ -32,7 +32,7 @@ class Bite_KnockDown(Ability):
         print(f"{attacker['name']} кусает {target['name']}, пытаясь сбить с ног!")
         roll = random.randint(1, 20) + attacker.get('strength_mod', 0)
         if roll >= target.get('armor_class', 10):
-            add_status('knock_down', target)
+            insert_status(target, '12', 1)
             print(f"{target['name']} сбит с ног!")
         else:
             print(f"{target['name']} устоял на ногах.")
@@ -59,16 +59,21 @@ class Drawing_Strength(Ability):
 
     def apply(self, attacker, target):
         roll = hit(attacker)
-        if roll >= target.get('armor_class', 10):
-            necro = dice('2d6 + ' + str(attacker.get('strength_mod', 0)))
+        if roll >= target['armor_class']:
+            necro = dice('2d6')
             target['hitpoints'] -= necro
-            print(f"⚔️ {attacker['name']} наносит {necro} некротического урона {target['name']}")
+            
+            # сколько сил отнять
             drain = dice('1d4')
-            # insert_status принимает (status_id, target, time) или (name, target)
-            insert_status('strength_drain', target, drain)
+            # записываем статус с параметром drain
+            insert_status(
+                status_id = 16,
+                creature = target,
+                remaining_time = None,      # этот эффект до отдыха
+                effect_value = drain,       # конкретное число
+                effect_meta = None          # можно не заполнять
+            )
             print(f"{target['name']} теряет {drain} очков Силы до отдыха!")
-        else:
-            print(f"{attacker['name']} промахивается Draining Swipe.")
 
 # -------------------
 # Регистрация способностей
