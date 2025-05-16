@@ -57,14 +57,14 @@ def D20_dice ():
     return d20_roll
 
 def dice(dice_str): # Так, у меня на входе 2d10 + 4 например
-    count, diсe = dice_str.lower().split("d") # делится на count(2) и dice(10 + 4)
-    if "+" in dice:
-        diсe, plus = dice.split(" + ") # Получается dice 10 (какая кость кидается), plus 4 (доп урон)
-        count, dice, plus = int(count), int(dice), int(plus)
-        result = sum(random.randint(1, diсe) for _ in range(count)) + plus
+    count, diсe_l = dice_str.lower().split("d") # делится на count(2) и dice(10 + 4)
+    if "+" in diсe_l:
+        diсe_l, plus = diсe_l.split(" + ") # Получается dice 10 (какая кость кидается), plus 4 (доп урон)
+        count, diсe_l, plus = int(count), int(diсe_l), int(plus)
+        result = sum(random.randint(1, diсe_l) for _ in range(count)) + plus
     else: 
-        count, dice = int(count), int(dice)
-        result = sum(random.randint(1, dice) for _ in range(count))
+        count, diсe_l = int(count), int(diсe_l)
+        result = sum(random.randint(1, diсe_l) for _ in range(count))
          
     return result
 
@@ -195,7 +195,7 @@ def damage (data, attack_roll): # Если attack_roll 2000 то это крит
             characteristic = check_mod(better_value(data, "strength", "dexterity")) #если фехтовальное или универсальное - то можно использовать ловкость или силу, определеяю чего у перса больше
         else: # если это другой тип, то только по силе смотрю
             characteristic = check_mod(data["strength"])
-        if data["count_weapon"] == 2: # если у перса 2 оружия, то 2-е оружие это доп урон
+        if data["count_weapons"] == 2: # если у перса 2 оружия, то 2-е оружие это доп урон
             for _ in range(0, dice_value[0]): # теперь бросаем столько раз, сколько собсна написано 
                 roll2 += randint(1, dice_value[1]) # получаем дополнительный дамаге
         else: 
@@ -273,3 +273,35 @@ def check_saving(data, characteristic, skill,  value): # проверка спа
     else:
         return False
     
+
+# Проверка статуса существа
+
+def check_status(fighter):
+    if fighter["who_is"] == 1:
+        status_fighter = data_base.get_data("status_now", "id_character", fighter["id"]) # Нужно получить данные о статусах атакующего и проверить есть ли в них статус "knock_down"
+
+    else:
+        status_fighter = data_base.get_data("status_now", "id_monster", fighter["id"])
+        
+    return status_fighter
+                
+
+# Уменьшение time статусов в функции fight
+
+def reducing_status(fighter, status_fighter):
+    for i in status_fighter:
+        if i["name_effects"] == "knock_down":
+            time = i['time']
+            if time <= 0:
+                data_base.delete_row("status_now", "id", i["id"])
+            else:
+                if time == 1:
+                    round = "встанет через 1 ход"
+                elif time >= 2 and time <= 4:
+                    round = f"встанет через {time} хода"
+                else:
+                    round = f"встанет через {time} ходов"
+                time = i['time'] - 1
+                data_base.update_data_base("status_now", "time", time, "id", i["id"]) # уменьшаю time на 1 в БД
+                print(f"{fighter['name']} сбит с ног и {round}")
+                continue
